@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskOps — Case Management System</title>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #222536;
+      --border: #2e3148; --text: #e8eaf0; --text-dim: #8b8fa8;
+      --primary: #6c6ff7; --primary-dark: #5558d4; --danger: #f05252;
+      --warning: #f59e0b; --success: #10b981; --info: #3b82f6;
+      --radius: 8px; --font: 'Inter', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+    #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; }
+    .auth-logo { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+    .auth-subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 32px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+    input, select, textarea { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 14px; outline: none; transition: border .2s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+    .btn { padding: 10px 18px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-block { width: 100%; justify-content: center; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .error-msg { color: var(--danger); font-size: 13px; margin-top: 12px; }
+    #app { display: none; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-logo { padding: 0 20px 20px; font-size: 16px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); }
+    .sidebar-logo span { color: var(--text-dim); font-weight: 400; font-size: 11px; display: block; }
+    .nav-items { padding: 16px 0; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; font-size: 13px; color: var(--text-dim); transition: all .15s; border-left: 3px solid transparent; }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--primary); border-left-color: var(--primary); background: rgba(108,111,247,.08); }
+    .nav-icon { font-size: 16px; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+    .user-info { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+    .user-info strong { color: var(--text); display: block; }
+    .main { flex: 1; overflow-y: auto; }
+    .page { display: none; padding: 28px; }
+    .page.active { display: block; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .page-title { font-size: 20px; font-weight: 700; }
+    .page-subtitle { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; }
+    .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+    .kpi-card.danger .kpi-value { color: var(--danger); }
+    .kpi-card.warning .kpi-value { color: var(--warning); }
+    .kpi-card.success .kpi-value { color: var(--success); }
+    .kpi-card.info .kpi-value { color: var(--info); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-title { font-size: 14px; font-weight: 600; }
+    .card-body { padding: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { padding: 10px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--primary); }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-blocked { background: rgba(240,82,82,.15); color: var(--danger); }
+    .badge-review { background: rgba(245,158,11,.15); color: var(--warning); }
+    .badge-approved { background: rgba(16,185,129,.15); color: var(--success); }
+    .badge-frozen { background: rgba(59,130,246,.15); color: var(--info); }
+    .badge-active { background: rgba(16,185,129,.1); color: var(--success); }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .filters input, .filters select { width: auto; min-width: 160px; }
+    .filter-search { flex: 1; min-width: 200px; }
+    .bulk-bar { background: var(--primary); color: #fff; padding: 12px 20px; border-radius: var(--radius); display: none; align-items: center; gap: 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600; }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar .bulk-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+    .bulk-bar .btn { background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .bulk-bar .btn-danger-bulk { background: rgba(240,82,82,.4); }
+    .pagination { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); }
+    .page-info { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+    .audit-entry { display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .audit-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: rgba(108,111,247,.15); }
+    .audit-body { flex: 1; }
+    .audit-action { font-weight: 600; color: var(--text); }
+    .audit-meta { color: var(--text-dim); font-size: 12px; margin-top: 3px; }
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; min-width: 280px; display: flex; align-items: center; gap: 10px; animation: slideIn .2s ease; }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--danger); }
+    .toast.info { border-left: 3px solid var(--info); }
+    @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .score-bar { display: flex; align-items: center; gap: 8px; }
+    .score-pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .score-high { background: rgba(240,82,82,.15); color: var(--danger); }
+    .score-mid { background: rgba(245,158,11,.15); color: var(--warning); }
+    .score-low { background: rgba(16,185,129,.15); color: var(--success); }
+    .loading { color: var(--text-dim); padding: 40px; text-align: center; }
+    .empty-state { color: var(--text-dim); padding: 48px; text-align: center; }
+    .risk-bar-wrap { width: 80px; height: 6px; background: var(--border); border-radius: 3px; }
+    .risk-bar-fill { height: 100%; border-radius: 3px; }
+    .tag { display: inline-flex; align-items: center; padding: 2px 8px; background: rgba(108,111,247,.12); color: var(--primary); border-radius: 4px; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🛡️ RiskOps</div>
+    <div class="auth-subtitle">Automated Risk Case Management System</div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="admin@riskops.io" value="admin@riskops.io" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" value="Admin@123!" />
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">Sign In</button>
+    <div id="login-error" class="error-msg"></div>
+    <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--text-dim);">
+      <strong style="color:var(--text)">Demo Credentials</strong><br>
+      Admin: admin@riskops.io / Admin@123!<br>
+      Analyst: analyst@riskops.io / Analyst@123!<br>
+      Viewer: viewer@riskops.io / Viewer@123!
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-logo">🛡️ RiskOps<span>Case Management v1.0</span></div>
+      <nav class="nav-items">
+        <div class="nav-item active" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="navigate('merchants')"><span class="nav-icon">🏪</span> Merchants</div>
+        <div class="nav-item" onclick="navigate('bulk')"><span class="nav-icon">⚡</span> Bulk Actions</div>
+        <div class="nav-item" onclick="navigate('audit')"><span class="nav-icon">📋</span> Audit Trail</div>
+        <div id="nav-users" class="nav-item" onclick="navigate('users')" style="display:none"><span class="nav-icon">👥</span> Users</div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info"><strong id="sidebar-name">–</strong><span id="sidebar-role">–</span></div>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+    <div class="main">
+
+      <div id="page-dashboard" class="page active">
+        <div class="page-header">
+          <div><div class="page-title">Risk Dashboard</div><div class="page-subtitle">Live merchant risk overview</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">↻ Refresh</button>
+        </div>
+        <div class="kpi-grid" id="kpi-grid"><div class="loading">Loading KPIs…</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">🚨 Flagged Merchants</span></div>
+            <div id="flagged-list" style="max-height:280px;overflow-y:auto"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">📜 Recent Activity</span></div>
+            <div id="activity-feed" style="max-height:280px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-merchants" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Merchant Risk Cases</div><div class="page-subtitle">View, assign, and manage flagged merchants</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadMerchants()">↻ Refresh</button>
+        </div>
+        <div class="filters">
+          <input class="filter-search" type="text" id="filter-search" placeholder="Search merchant, ID or email…" oninput="debounceSearch()" />
+          <select id="filter-status" onchange="loadMerchants()">
+            <option value="">All Statuses</option>
+            <option value="REVIEW">⚠️ Review</option>
+            <option value="APPROVED">✅ Approved</option>
+            <option value="BLOCKED">🚫 Blocked</option>
+          </select>
+          <select id="filter-frozen" onchange="loadMerchants()">
+            <option value="">Freeze Status</option>
+            <option value="true">❄️ Frozen</option>
+            <option value="false">🔓 Active</option>
+          </select>
+        </div>
+        <div class="bulk-bar" id="bulk-bar">
+          <span id="bulk-count">0 merchants selected</span>
+          <div class="bulk-actions">
+            <button class="btn btn-sm" onclick="openBulkModal('FREEZE')">❄️ Freeze All</button>
+            <button class="btn btn-sm" onclick="openBulkModal('UNFREEZE')">🔓 Unfreeze All</button>
+            <button class="btn btn-sm" onclick="openBulkModal('SET_REVIEW')">⚠️ Set Review</button>
+            <button class="btn btn-sm" onclick="openBulkModal('SET_APPROVED')">✅ Approve All</button>
+            <button class="btn btn-sm btn-danger-bulk" onclick="openBulkModal('SET_BLOCKED')">🚫 Block All</button>
+            <button class="btn btn-sm" onclick="clearSelection()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:40px"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" /></th>
+                  <th>Merchant</th><th>Country</th><th>Risk Score</th>
+                  <th>Status</th><th>Frozen</th><th>Volume</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="merchant-tbody"><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="merchant-pagination"></div>
+        </div>
+      </div>
+
+      <div id="page-bulk" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Bulk Action Jobs</div><div class="page-subtitle">History of all bulk operations</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadBulkJobs()">↻ Refresh</button>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr><th>Job Reference</th><th>Action</th><th>Status</th><th>Total</th><th>Success</th><th>Failures</th><th>Initiated By</th><th>Created</th></tr>
+              </thead>
+              <tbody id="bulk-tbody"><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-audit" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Audit Trail</div><div class="page-subtitle">Immutable log of all system actions</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAuditLogs()">↻ Refresh</button>
+        </div>
+        <div class="filters">
+          <select id="audit-action-filter" onchange="loadAuditLogs()">
+            <option value="">All Actions</option>
+            <option value="MERCHANT_FREEZE">Freeze</option>
+            <option value="MERCHANT_UNFREEZE">Unfreeze</option>
+            <option value="MERCHANT_STATUS_CHANGE">Status Change</option>
+            <option value="BULK_JOB_CREATED">Bulk Job</option>
+            <option value="USER_LOGIN">Login</option>
+          </select>
+        </div>
+        <div class="card">
+          <div id="audit-log-list"><div class="loading">Loading…</div></div>
+          <div class="pagination" id="audit-pagination"></div>
+        </div>
+      </div>
+
+      <div id="page-users" class="page">
+        <div class="page-header">
+          <div><div class="page-title">User Management</div><div class="page-subtitle">Manage team members and roles</div></div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+              <tbody id="users-tbody"><tr><td colspan="6" class="loading">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bulk-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="bulk-modal-title">Bulk Action</div>
+      <button class="modal-close" onclick="closeModal('bulk-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="bulk-modal-desc" style="color:var(--text-dim);margin-bottom:16px;font-size:14px;"></p>
+      <div class="form-group">
+        <label>Reason / Notes</label>
+        <textarea id="bulk-reason" rows="3" placeholder="e.g. Suspicious volume spike detected"></textarea>
+      </div>
+      <div id="bulk-warnings" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('bulk-modal')">Cancel</button>
+      <button class="btn btn-primary" id="bulk-confirm-btn" onclick="executeBulkAction()">Execute Bulk Action</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="action-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="action-modal-title">Action</div>
+      <button class="modal-close" onclick="closeModal('action-modal')">×</button>
+    </div>
+    <div class="modal-body" id="action-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('action-modal')">Cancel</button>
+      <button class="btn btn-primary" id="action-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const API = 'http://localhost:5000';
+let _authToken = null;
+let currentUser = null;
+let selectedMerchants = new Set();
+let currentBulkAction = null;
+let merchantPage = 1;
+let auditPage = 1;
+let searchTimer = null;
+
+function getToken() {
+  return _authToken || localStorage.getItem('riskops_token');
+}
+
+function setToken(t) {
+  _authToken = t;
+  if (t) localStorage.setItem('riskops_token', t);
+  else localStorage.removeItem('riskops_token');
+}
+
+function showLogin() {
+  _authToken = null;
+  currentUser = null;
+  localStorage.removeItem('riskops_token');
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+async function api(path, opts = {}) {
+  const t = getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const fetchOpts = { method: opts.method || 'GET', headers };
+  if (opts.body) fetchOpts.body = JSON.stringify(opts.body);
+  const res = await fetch(API + path, fetchOpts);
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { showLogin(); return null; }
+  if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+  return data;
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  document.getElementById('login-error').textContent = '';
+  try {
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    setToken(data.access_token);
+    currentUser = data.user;
+    initApp();
+  } catch (e) {
+    document.getElementById('login-error').textContent = e.message;
+  }
+}
+
+async function doLogout() {
+  try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) {}
+  showLogin();
+}
+
+function initApp() {
+  showApp();
+  document.getElementById('sidebar-name').textContent = currentUser.full_name;
+  document.getElementById('sidebar-role').textContent = currentUser.role?.name || '';
+  if (currentUser.role?.name === 'ADMIN') {
+    document.getElementById('nav-users').style.display = 'flex';
+  }
+  loadDashboard();
+}
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (page === 'merchants') loadMerchants();
+  else if (page === 'bulk') loadBulkJobs();
+  else if (page === 'audit') loadAuditLogs();
+  else if (page === 'users') loadUsers();
+  else if (page === 'dashboard') loadDashboard();
+}
+
+async function loadDashboard() {
+  try {
+    const [summary, flagged, activity] = await Promise.all([
+      api('/api/dashboard/summary'),
+      api('/api/dashboard/flagged'),
+      api('/api/dashboard/recent-activity'),
+    ]);
+    if (!summary || !summary.merchants) return;
+    const m = summary.merchants;
+    document.getElementById('kpi-grid').innerHTML = `
+      <div class="kpi-card danger"><div class="kpi-label">Blocked</div><div class="kpi-value">${m.by_status?.BLOCKED || 0}</div><div class="kpi-sub">merchants blocked</div></div>
+      <div class="kpi-card warning"><div class="kpi-label">Under Review</div><div class="kpi-value">${m.by_status?.REVIEW || 0}</div><div class="kpi-sub">${m.unassigned_review || 0} unassigned</div></div>
+      <div class="kpi-card success"><div class="kpi-label">Approved</div><div class="kpi-value">${m.by_status?.APPROVED || 0}</div><div class="kpi-sub">active merchants</div></div>
+      <div class="kpi-card info"><div class="kpi-label">Total Merchants</div><div class="kpi-value">${m.total}</div><div class="kpi-sub">${m.frozen} frozen</div></div>
+      <div class="kpi-card danger"><div class="kpi-label">High Risk ≥75</div><div class="kpi-value">${m.high_risk}</div><div class="kpi-sub">score 75+</div></div>
+      <div class="kpi-card"><div class="kpi-label">Actions (24h)</div><div class="kpi-value" style="color:var(--primary)">${summary.activity?.actions_last_24h || 0}</div><div class="kpi-sub">audit events today</div></div>
+    `;
+    if (flagged && flagged.data) {
+      document.getElementById('flagged-list').innerHTML = flagged.data.length
+        ? flagged.data.map(m => `
+          <div class="audit-entry">
+            <div style="flex:1"><div style="font-weight:600;font-size:13px">${m.business_name}</div><div style="font-size:11px;color:var(--text-dim)">${m.merchant_id} · ${m.country}</div></div>
+            <div style="text-align:right"><span class="badge badge-${m.risk_status.toLowerCase()}">${m.risk_status}</span><div style="font-size:11px;color:var(--danger);margin-top:4px">Score: ${m.risk_score}</div></div>
+          </div>`).join('')
+        : '<div class="empty-state">No flagged merchants</div>';
+    }
+    if (activity && activity.data) {
+      document.getElementById('activity-feed').innerHTML = activity.data.length
+        ? activity.data.map(l => renderAuditEntry(l)).join('')
+        : '<div class="empty-state">No recent activity</div>';
+    }
+  } catch (e) {
+    showToast('Dashboard error: ' + e.message, 'error');
+  }
+}
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { merchantPage = 1; loadMerchants(); }, 400);
+}
+
+async function loadMerchants() {
+  const search = document.getElementById('filter-search')?.value || '';
+  const status = document.getElementById('filter-status')?.value || '';
+  const frozen = document.getElementById('filter-frozen')?.value || '';
+  const params = new URLSearchParams({ page: merchantPage, per_page: 15 });
+  if (search) params.set('search', search);
+  if (status) params.set('risk_status', status);
+  if (frozen !== '') params.set('is_frozen', frozen);
+  document.getElementById('merchant-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  try {
+    const data = await api('/api/merchants/?' + params);
+    if (!data) return;
+    document.getElementById('merchant-tbody').innerHTML = data.data.length
+      ? data.data.map(m => `
+        <tr>
+          <td><input type="checkbox" value="${m.id}" onchange="toggleMerchant(${m.id}, this.checked)" ${selectedMerchants.has(m.id)?'checked':''} /></td>
+          <td><div style="font-weight:600">${m.business_name}</div><div style="font-size:11px;color:var(--text-dim)">${m.merchant_id} · ${m.email}</div></td>
+          <td><span class="tag">${m.country}</span></td>
+          <td>
+            <div class="score-bar">
+              <div class="risk-bar-wrap"><div class="risk-bar-fill" style="width:${m.risk_score}%;background:${m.risk_score>=75?'var(--danger)':m.risk_score>=50?'var(--warning)':'var(--success)'}"></div></div>
+              <span class="score-pill ${m.risk_score>=75?'score-high':m.risk_score>=50?'score-mid':'score-low'}">${m.risk_score}</span>
+            </div>
+          </td>
+          <td><span class="badge badge-${m.risk_status.toLowerCase()}">${m.risk_status}</span></td>
+          <td>${m.is_frozen ? '<span class="badge badge-frozen">❄️ Frozen</span>' : '<span class="badge badge-active">Active</span>'}</td>
+          <td>$${(m.monthly_volume/1000).toFixed(0)}K</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="showMerchantActions(${m.id},'${m.merchant_id}','${m.business_name.replace(/'/g,"\\'")}')">Manage</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="8" class="empty-state">No merchants found</td></tr>';
+    const p = data.pagination;
+    document.getElementById('merchant-pagination').innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="changeMerchantPage(${p.page-1})" ${p.page<=1?'disabled':''}>← Prev</button>
+      <button class="btn btn-ghost btn-sm" onclick="changeMerchantPage(${p.page+1})" ${!p.has_next?'disabled':''}>Next →</button>
+      <span class="page-info">Page ${p.page} of ${p.pages} · ${p.total} total</span>`;
+  } catch (e) {
+    document.getElementById('merchant-tbody').innerHTML = `<tr><td colspan="8" style="color:var(--danger);padding:20px">${e.message}</td></tr>`;
+  }
+}
+
+function changeMerchantPage(p) { merchantPage = p; loadMerchants(); }
+
+function toggleMerchant(id, checked) {
+  if (checked) selectedMerchants.add(id); else selectedMerchants.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(el) {
+  document.querySelectorAll('#merchant-tbody input[type=checkbox]').forEach(cb => {
+    cb.checked = el.checked;
+    toggleMerchant(parseInt(cb.value), el.checked);
+  });
+}
+
+function clearSelection() {
+  selectedMerchants.clear();
+  document.querySelectorAll('#merchant-tbody input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.getElementById('select-all').checked = false;
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const n = selectedMerchants.size;
+  const bar = document.getElementById('bulk-bar');
+  if (n > 0) { bar.classList.add('visible'); document.getElementById('bulk-count').textContent = n + ' merchant' + (n>1?'s':'') + ' selected'; }
+  else bar.classList.remove('visible');
+}
+
+function showMerchantActions(id, merchantId, name) {
+  document.getElementById('action-modal-title').textContent = name;
+  document.getElementById('action-modal-body').innerHTML = `
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">ID: ${merchantId}</p>
+    <div class="form-group"><label>Change Risk Status</label>
+      <select id="modal-status">
+        <option value="">— Keep current —</option>
+        <option value="REVIEW">⚠️ Under Review</option>
+        <option value="APPROVED">✅ Approved</option>
+        <option value="BLOCKED">🚫 Blocked</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Reason / Notes</label><textarea id="modal-reason" rows="2" placeholder="Add context for audit log…"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="singleAction(${id},'freeze')">❄️ Freeze</button>
+      <button class="btn btn-ghost btn-sm" onclick="singleAction(${id},'unfreeze')">🔓 Unfreeze</button>
+    </div>`;
+  document.getElementById('action-confirm-btn').onclick = () => saveStatus(id);
+  openModal('action-modal');
+}
+
+async function saveStatus(merchantId) {
+  const status = document.getElementById('modal-status')?.value;
+  const reason = document.getElementById('modal-reason')?.value;
+  if (!status) { closeModal('action-modal'); return; }
+  try {
+    await api('/api/merchants/' + merchantId + '/status', { method: 'POST', body: { risk_status: status, reason } });
+    showToast('Status updated to ' + status, 'success');
+    closeModal('action-modal'); loadMerchants();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function singleAction(merchantId, action) {
+  const reason = document.getElementById('modal-reason')?.value || '';
+  try {
+    await api('/api/merchants/' + merchantId + '/' + action, { method: 'POST', body: { reason } });
+    showToast('Merchant ' + action + 'd successfully', 'success');
+    closeModal('action-modal'); loadMerchants();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+const actionLabels = { FREEZE:'Freeze', UNFREEZE:'Unfreeze', SET_REVIEW:'Set to Review', SET_APPROVED:'Approve', SET_BLOCKED:'Block' };
+
+function openBulkModal(action) {
+  currentBulkAction = action;
+  const n = selectedMerchants.size;
+  const label = actionLabels[action] || action;
+  document.getElementById('bulk-modal-title').textContent = 'Bulk ' + label;
+  document.getElementById('bulk-modal-desc').textContent = 'You are about to ' + label.toLowerCase() + ' ' + n + ' merchant' + (n>1?'s':'') + '. This will be fully logged.';
+  document.getElementById('bulk-reason').value = '';
+  document.getElementById('bulk-warnings').innerHTML = action === 'SET_BLOCKED'
+    ? '<div style="padding:10px;background:rgba(240,82,82,.1);border-radius:6px;color:var(--danger);font-size:12px">⚠️ Blocking will auto-freeze accounts.</div>' : '';
+  openModal('bulk-modal');
+}
+
+async function executeBulkAction() {
+  const reason = document.getElementById('bulk-reason').value.trim();
+  const btn = document.getElementById('bulk-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Executing…';
+  try {
+    const result = await api('/api/bulk/actions', {
+      method: 'POST',
+      body: { action_type: currentBulkAction, merchant_ids: Array.from(selectedMerchants), params: { reason } }
+    });
+    if (!result) return;
+    const job = result.data;
+    showToast('Bulk job ' + job.job_reference + ': ' + job.success_count + '/' + job.total_merchants + ' succeeded', 'success');
+    closeModal('bulk-modal'); clearSelection(); loadMerchants();
+  } catch (e) { showToast('Bulk action failed: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Execute Bulk Action'; }
+}
+
+async function loadBulkJobs() {
+  document.getElementById('bulk-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  try {
+    const data = await api('/api/bulk/jobs?per_page=25');
+    if (!data) return;
+    const statusColors = { COMPLETED:'success', FAILED:'blocked', PARTIAL:'review', PENDING:'', PROCESSING:'frozen' };
+    document.getElementById('bulk-tbody').innerHTML = data.data.length
+      ? data.data.map(j => `<tr>
+          <td style="font-family:monospace;font-size:12px">${j.job_reference}</td>
+          <td><span class="tag">${j.action_type}</span></td>
+          <td><span class="badge badge-${statusColors[j.status]||''}">${j.status}</span></td>
+          <td>${j.total_merchants}</td>
+          <td style="color:var(--success)">${j.success_count}</td>
+          <td style="color:${j.failure_count>0?'var(--danger)':'var(--text-dim)'}">${j.failure_count}</td>
+          <td>${j.initiated_by_name || '–'}</td>
+          <td style="color:var(--text-dim);font-size:12px">${fmtDate(j.created_at)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="8" class="empty-state">No bulk jobs yet</td></tr>';
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function loadAuditLogs() {
+  const action = document.getElementById('audit-action-filter')?.value || '';
+  const params = new URLSearchParams({ page: auditPage, per_page: 25 });
+  if (action) params.set('action', action);
+  try {
+    const data = await api('/api/audit/logs?' + params);
+    if (!data) return;
+    document.getElementById('audit-log-list').innerHTML = data.data.length
+      ? data.data.map(l => renderAuditEntry(l)).join('')
+      : '<div class="empty-state">No logs found</div>';
+    const p = data.pagination;
+    document.getElementById('audit-pagination').innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="changeAuditPage(${p.page-1})" ${p.page<=1?'disabled':''}>← Prev</button>
+      <button class="btn btn-ghost btn-sm" onclick="changeAuditPage(${p.page+1})" ${p.page>=p.pages?'disabled':''}>Next →</button>
+      <span class="page-info">Page ${p.page} of ${p.pages} · ${p.total} total</span>`;
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function changeAuditPage(p) { auditPage = p; loadAuditLogs(); }
+
+function renderAuditEntry(l) {
+  const icons = { MERCHANT_FREEZE:'❄️', MERCHANT_UNFREEZE:'🔓', MERCHANT_STATUS_CHANGE:'🔄', MERCHANT_CREATED:'✨', BULK_JOB_CREATED:'⚡', BULK_JOB_COMPLETED:'✅', USER_LOGIN:'🔑', USER_LOGOUT:'🚪' };
+  return `<div class="audit-entry">
+    <div class="audit-icon">${icons[l.action] || '📋'}</div>
+    <div class="audit-body">
+      <div class="audit-action">${l.action.replace(/_/g,' ')}</div>
+      <div class="audit-meta">${l.merchant_name ? '<strong>' + l.merchant_name + '</strong> · ' : ''}by ${l.actor_name || 'System'} · ${fmtDate(l.timestamp)}</div>
+    </div>
+  </div>`;
+}
+
+async function loadUsers() {
+  try {
+    const data = await api('/api/users/');
+    if (!data) return;
+    document.getElementById('users-tbody').innerHTML = data.data.length
+      ? data.data.map(u => `<tr>
+          <td style="font-weight:600">${u.full_name}</td>
+          <td style="color:var(--text-dim)">${u.email}</td>
+          <td><span class="tag">${u.role?.name || '–'}</span></td>
+          <td>${u.is_active ? '<span class="badge badge-approved">Active</span>' : '<span class="badge badge-blocked">Inactive</span>'}</td>
+          <td style="color:var(--text-dim);font-size:12px">${u.last_login ? fmtDate(u.last_login) : 'Never'}</td>
+          <td>${u.id !== currentUser?.id && u.is_active ? '<button class="btn btn-ghost btn-sm" onclick="deactivateUser(' + u.id + ',\'' + u.username + '\')">Deactivate</button>' : ''}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="6" class="empty-state">No users</td></tr>';
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function deactivateUser(id, username) {
+  if (!confirm('Deactivate ' + username + '?')) return;
+  try { await api('/api/users/' + id + '/deactivate', { method: 'POST' }); showToast('User deactivated', 'success'); loadUsers(); }
+  catch (e) { showToast(e.message, 'error'); }
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function fmtDate(iso) {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function showToast(msg, type = 'info') {
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<span>' + icons[type] + '</span>' + msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// BOOT
+(async function() {
+  const saved = localStorage.getItem('riskops_token');
+  if (saved) {
+    _authToken = saved;
+    try {
+      const res = await fetch(API + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + saved, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        currentUser = d.user;
+        initApp();
+        return;
+      }
+    } catch(_) {}
+  }
+  showLogin();
+})();
+</script>
+</body>
+</html>
