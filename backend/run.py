@@ -15,5 +15,12 @@ def make_shell_context():
         "BulkActionJob": BulkActionJob,
     }
 
+with app.app_context():
+    db.create_all()
+    # Auto seed if no roles exist
+    if Role.query.count() == 0:
+        from seed import seed
+        seed()
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
